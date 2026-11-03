@@ -1,0 +1,8 @@
+flask>=3.0
+gunicorn>=22.0
+pandas
+numpy
+scikit-learn
+matplotlib
+pillow
+xgboost-cpu

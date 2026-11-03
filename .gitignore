@@ -1,0 +1,5 @@
+__pycache__/
+*.pyc
+voltnexa_users.db
+voltnexa_secret.key
+figures/

@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: voltnexa
+    runtime: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn voltnexa_pro_v3:app --workers 1 --threads 4 --timeout 180 --bind 0.0.0.0:$PORT
+    healthCheckPath: /healthz
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.9
+      - key: VOLTNEXA_SECRET
+        generateValue: true
+      - key: VOLTNEXA_HTTPS
+        value: "1"
