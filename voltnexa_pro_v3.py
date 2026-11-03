@@ -467,7 +467,7 @@ T["home.html"] = """{% extends "base.html" %}{% from "macros.html" import locbox
 <div class="g3">
 <div class="card"><div class="ico">📊</div><h3>Know the crowd before you go</h3><p class="m">See whether a station is quiet, moderate or busy at the hour you will arrive, and the expected waiting time.</p></div>
 <div class="card"><div class="ico">🛣️</div><h3>Plan long drives with confidence</h3><p class="m">Enter your route and battery level. Voltnexa suggests a charging stop along the way with the least crowd.</p></div>
-<div class="card"><div class="ico">📍</div><h3>Search anywhere, or use your location</h3><p class="m">Type any town, address or landmark, drop a pin on the map, or use your current location with one tap.</p></div></div></section>
+<div class="card"><div class="ico">📍</div><h3>Search anywhere, or use your location</h3><p class="m">Type any town, address or landmark or use your current location with one tap.</p></div></div></section>
 
 <section><h2>How it works</h2><div class="g3 steps">
 <div class="card step"><h3>Choose where</h3><p class="m">Search a place or use your current location, and pick when you want to charge.</p></div>
@@ -495,9 +495,8 @@ T["find.html"] = """{% extends "base.html" %}{% from "macros.html" import locbox
 </div><button class="go" type="submit">{{ 'Plan my route' if mode == 'trip' else 'Find chargers' }}</button></form>
 {% if error %}<div class="note">{{ error }}</div>{% endif %}</div>
 
-
 {% if mode == 'nearby' and results %}
-<p class="m" style="margin-top:16px">{{ 'Weekend' if we else 'Weekday' }} estimates for {{ clock }} near <b>{{ q }}</b>. Tip: click the map to choose a different spot.</p>
+<p class="m" style="margin-top:16px">{{ 'Weekend' if we else 'Weekday' }} estimates for {{ clock }} near <b>{{ q }}</b>.</p>
 {% if results[0].dist > 40 %}<div class="note">The nearest Voltnexa station is {{ results[0].dist }} km from this location. Station coverage is currently limited to the Bengaluru region and nearby highways.</div>{% endif %}
 <div class="res">{% for r in results %}<div class="card row"><div class="rk">{{ loop.index }}</div>
 <div><h3>{{ r.name }}</h3><div class="m"><span class="pill {{ r.css }}">{{ r.level }}</span>about {{ r.wait }} min wait · {{ r.kwh }} kWh expected demand</div>
@@ -517,19 +516,7 @@ T["find.html"] = """{% extends "base.html" %}{% from "macros.html" import locbox
 <p class="m" style="margin-top:14px">{% if trip.live %}Distance and driving time come from the road route (OpenStreetMap routing). Traffic is not included.{% else %}The road route could not be loaded, so distance and time are estimates (straight line x 1.25, 50 km/h).{% endif %} Navigate opens turn-by-turn directions through the recommended stop.</p>
 {% endif %}
 </section></div>{% endblock %}
-{% block scripts %}<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script>
-var D={{ data|tojson }};
-var map=("map");"https://tile.openstreetmap.org/{z}/{x}/{y}.png",{attribution:"© OpenStreetMap contributors",maxZoom:19}).addTo(map);
-var col={lo:"#0f9d58",me:"#d9822b",hi:"#c8433a"},pts=[];
-D.markers.forEach(function(m){var c=L.circleMarker([m.lat,m.lng],{radius:8,color:"#fff",weight:2,fillColor:col[m.css],fillOpacity:1}).addTo(map);
- var d=document.createElement("div");d.innerHTML="<b></b><br><span></span>";d.querySelector("b").textContent=m.n;d.querySelector("span").textContent=m.level+" · "+m.kw+" kW "+m.conn;c.bindPopup(d);pts.push([m.lat,m.lng])});
-function pin(p,label){(p).addTo(map).bindPopup(document.createTextNode(label));}
-if(D.me)pin([D.me[0],D.me[1]],D.me[2]);if(D.dest)pin([D.dest[0],D.dest[1]],D.dest[2]);
-if(D.me&&D.dest){var rl=L.polyline(D.route||[[D.me[0],D.me[1]],[D.dest[0],D.dest[1]]],{color:"#0f9d58",weight:5}).addTo(map);map.fitBounds(rl.getBounds(),{padding:[40,40]})}
-else if(D.me)([D.me[0],D.me[1]],11);else map.fitBounds(pts,{padding:[30,30]});
-if(D.mode==="nearby")map.on("click",function(e){var f=document.getElementById("mainform");setLoc(f.querySelector(".loc-box"),"Pin on map",e.latlng.lat.toFixed(5),e.latlng.lng.toFixed(5));submitForm(f)});
-</script>{% endblock %}"""
+"""
 
 T["about.html"] = """{% extends "base.html" %}{% block body %}<div class="w"><section>
 <h2>About Voltnexa</h2>
@@ -537,7 +524,7 @@ T["about.html"] = """{% extends "base.html" %}{% block body %}<div class="w"><se
 <div class="card"><h3>Why Voltnexa</h3><p class="m" style="margin:6px 0 0;font-size:15.5px">Finding a charger is easy. Finding one that is free when you arrive is not. Drivers often reach a station to find every charger in use, or spend precious battery driving from one station to the next. Voltnexa predicts how busy each station will be at the hour you arrive, so you can pick a station with confidence before you leave.</p></div>
 
 <section><h2>What you can do</h2><div class="g3">
-<div class="card"><div class="ico">📍</div><h3>Search any place</h3><p class="m">Type a town, address or landmark, drop a pin on the map, or use your current location.</p></div>
+<div class="card"><div class="ico">📍</div><h3>Search any place</h3><p class="m">Type a town, address or landmark or use your current location.</p></div>
 <div class="card"><div class="ico">📊</div><h3>See the expected crowd</h3><p class="m">Each station shows a quiet, moderate or busy rating and an estimated waiting time.</p></div>
 <div class="card"><div class="ico">🛣️</div><h3>Plan outstation routes</h3><p class="m">Enter your battery level and destination to get a recommended charging stop along the way.</p></div>
 <div class="card"><div class="ico">🧭</div><h3>Navigate in one tap</h3><p class="m">Open directions to any station in your maps app.</p></div></div></section>
