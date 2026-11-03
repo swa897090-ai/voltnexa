@@ -478,7 +478,6 @@ T["home.html"] = """{% extends "base.html" %}{% from "macros.html" import locbox
 </div>{% endblock %}"""
 
 T["find.html"] = """{% extends "base.html" %}{% from "macros.html" import locbox %}
-{% block head %}<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">{% endblock %}
 {% block body %}<div class="w"><section>
 <h2>Find a charging station</h2><p class="m">Search any place, or plan a route. Results show the predicted crowd at your time of travel.</p>
 <div class="tabs" style="margin-top:16px"><a href="/find" class="{{ 'on' if mode == 'nearby' }}">Near a place</a><a href="/find?mode=trip" class="{{ 'on' if mode == 'trip' }}">Route planner</a></div>
@@ -496,7 +495,7 @@ T["find.html"] = """{% extends "base.html" %}{% from "macros.html" import locbox
 </div><button class="go" type="submit">{{ 'Plan my route' if mode == 'trip' else 'Find chargers' }}</button></form>
 {% if error %}<div class="note">{{ error }}</div>{% endif %}</div>
 
-<div id="map"></div>
+
 {% if mode == 'nearby' and results %}
 <p class="m" style="margin-top:16px">{{ 'Weekend' if we else 'Weekday' }} estimates for {{ clock }} near <b>{{ q }}</b>. Tip: click the map to choose a different spot.</p>
 {% if results[0].dist > 40 %}<div class="note">The nearest Voltnexa station is {{ results[0].dist }} km from this location. Station coverage is currently limited to the Bengaluru region and nearby highways.</div>{% endif %}
@@ -521,14 +520,14 @@ T["find.html"] = """{% extends "base.html" %}{% from "macros.html" import locbox
 {% block scripts %}<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
 var D={{ data|tojson }};
-var map=L.map("map");L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png",{attribution:"© OpenStreetMap contributors",maxZoom:19}).addTo(map);
+var map=("map");"https://tile.openstreetmap.org/{z}/{x}/{y}.png",{attribution:"© OpenStreetMap contributors",maxZoom:19}).addTo(map);
 var col={lo:"#0f9d58",me:"#d9822b",hi:"#c8433a"},pts=[];
 D.markers.forEach(function(m){var c=L.circleMarker([m.lat,m.lng],{radius:8,color:"#fff",weight:2,fillColor:col[m.css],fillOpacity:1}).addTo(map);
  var d=document.createElement("div");d.innerHTML="<b></b><br><span></span>";d.querySelector("b").textContent=m.n;d.querySelector("span").textContent=m.level+" · "+m.kw+" kW "+m.conn;c.bindPopup(d);pts.push([m.lat,m.lng])});
-function pin(p,label){L.marker(p).addTo(map).bindPopup(document.createTextNode(label));}
+function pin(p,label){(p).addTo(map).bindPopup(document.createTextNode(label));}
 if(D.me)pin([D.me[0],D.me[1]],D.me[2]);if(D.dest)pin([D.dest[0],D.dest[1]],D.dest[2]);
 if(D.me&&D.dest){var rl=L.polyline(D.route||[[D.me[0],D.me[1]],[D.dest[0],D.dest[1]]],{color:"#0f9d58",weight:5}).addTo(map);map.fitBounds(rl.getBounds(),{padding:[40,40]})}
-else if(D.me)map.setView([D.me[0],D.me[1]],11);else map.fitBounds(pts,{padding:[30,30]});
+else if(D.me)([D.me[0],D.me[1]],11);else map.fitBounds(pts,{padding:[30,30]});
 if(D.mode==="nearby")map.on("click",function(e){var f=document.getElementById("mainform");setLoc(f.querySelector(".loc-box"),"Pin on map",e.latlng.lat.toFixed(5),e.latlng.lng.toFixed(5));submitForm(f)});
 </script>{% endblock %}"""
 
