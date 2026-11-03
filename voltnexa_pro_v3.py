@@ -559,14 +559,65 @@ document.querySelectorAll(".pw button").forEach(function(b){b.onclick=function()
 
 T["login.html"] = """{% extends "base.html" %}{% block body %}<div class="w"><section>
 <div class="card auth-card"><h2>Welcome back</h2><p class="m">Log in with your phone number or email and your password.</p>
+{% if msg %}<div class="hint ok" style="margin-top:10px">{{ msg }}</div>{% endif %}
 {% if error %}<div class="err">{{ error }}</div>{% endif %}
 <form method="post" action="/login" class="f1" style="margin-top:14px" autocomplete="on">
 <input type="hidden" name="csrf" value="{{ csrf() }}"><input type="hidden" name="next" value="{{ nxt }}">
 <div><label for="ident">Phone number or email</label><input id="ident" name="ident" value="{{ ident }}" required autocomplete="username" inputmode="email" placeholder="9876543210 or you@example.com"></div>
 <div><label for="pw">Password</label><div class="pw"><input id="pw" name="password" type="password" required autocomplete="current-password" placeholder="Your password"><button type="button">Show</button></div></div>
+<div style="text-align:right;margin-top:-4px"><a href="/forgot" style="color:var(--ac);font-weight:700;font-size:14px">Forgot password?</a></div>
 <button class="go" type="submit" style="margin-top:4px">Log in</button></form>
 <p class="m" style="margin:16px 0 0">New to Voltnexa? <a href="/register" style="color:var(--ac);font-weight:700">Create an account</a></p></div></section></div>{% endblock %}
 {% block scripts %}<script>""" + PWCHK + """</script>{% endblock %}"""
+
+T["forgot.html"] = """{% extends "base.html" %}{% block body %}<div class="w"><section>
+<div class="card auth-card"><h2>Forgot password?</h2><p class="m">Enter the phone number you registered with. We send an OTP, then you can set a new password.</p>
+{% if error %}<div class="err">{{ error }}</div>{% endif %}
+<form id="rf" method="post" action="/forgot" class="f1" style="margin-top:14px" autocomplete="off" novalidate>
+<input type="hidden" name="csrf" value="{{ csrf() }}">
+<div><label for="ph">Registered phone number</label><div class="ph"><span class="pre">+91</span><input id="ph" name="phone" value="{{ phone }}" required inputmode="numeric" maxlength="10" autocomplete="tel-national" placeholder="10-digit mobile number"><button type="button" id="sendotp">Send OTP</button></div>
+<div class="hint" id="phh"></div></div>
+<div id="otpbox" hidden><label for="otp">Enter the 6-digit OTP sent to your phone</label><div class="ph"><input id="otp" name="otp" inputmode="numeric" maxlength="6" autocomplete="one-time-code" placeholder="••••••"><button type="button" id="verify">Verify</button></div>
+<div class="hint" id="oth"></div></div>
+<div id="pwbox" hidden>
+<div><label for="pw">New password</label><div class="pw"><input id="pw" name="password" type="password" required autocomplete="new-password" placeholder="Create a strong password"><button type="button">Show</button></div>
+<div class="meter"><i id="mt"></i></div><ul class="rules" id="rules"></ul></div>
+<div style="margin-top:12px"><label for="pw2">Confirm new password</label><div class="pw"><input id="pw2" name="password2" type="password" required autocomplete="new-password" placeholder="Re-enter the new password"><button type="button">Show</button></div><div class="hint" id="mh"></div></div>
+<button class="go" id="sub" type="submit" style="margin-top:12px" disabled>Change password</button></div></form>
+<p class="m" style="margin:16px 0 0">Remembered it? <a href="/login" style="color:var(--ac);font-weight:700">Back to log in</a></p></div></section></div>{% endblock %}
+{% block scripts %}<script>""" + PWCHK + r"""
+var $=function(i){return document.getElementById(i)},verified=false,verPhone="",CS=document.querySelector("[name=csrf]").value,cool=0,cooltimer=null;
+function hint(id,t,c){var e=$(id);e.textContent=t;e.className="hint "+(c||"")}
+function phone(){return $("ph").value.replace(/\D/g,"")}
+function phoneOk(){return /^[6-9][0-9]{9}$/.test(phone())}
+function api(u,b){return fetch(u,{method:"POST",headers:{"Content-Type":"application/json","X-CSRF-Token":CS},body:JSON.stringify(b)}).then(function(r){return r.json()})}
+$("rules").innerHTML=PW.map(function(r){return "<li>"+r[0]+"</li>"}).join("");
+function check(){
+ var p=$("pw").value,sc=PW.filter(function(r){return r[1](p)}).length,lis=$("rules").children;
+ PW.forEach(function(r,i){lis[i].className=r[1](p)?"ok":""});
+ $("mt").style.width=(sc/PW.length*100)+"%";$("mt").style.background=sc<4?"var(--bad)":sc<PW.length?"var(--warn)":"var(--ac)";
+ var same=$("pw2").value.length>0&&$("pw2").value===p;
+ if($("pw2").value)hint("mh",same?"Passwords match":"Passwords do not match",same?"ok":"bad");else hint("mh","");
+ $("sub").disabled=!(verified&&phoneOk()&&sc===PW.length&&same)}
+["pw","pw2"].forEach(function(i){$(i).addEventListener("input",check)});
+$("ph").addEventListener("input",function(){this.value=this.value.replace(/\D/g,"").slice(0,10);hint("phh","")});
+$("otp").addEventListener("input",function(){this.value=this.value.replace(/\D/g,"").slice(0,6)});
+function startCool(n){cool=n;clearInterval(cooltimer);var b=$("sendotp");b.disabled=true;cooltimer=setInterval(function(){cool--;if(cool<=0){clearInterval(cooltimer);b.disabled=false;b.textContent="Resend OTP"}else b.textContent="Resend in "+cool+"s"},1000);b.textContent="Resend in "+cool+"s"}
+$("sendotp").onclick=function(){
+ if(!phoneOk()){hint("phh","Enter a valid 10-digit Indian mobile number (starts with 6-9).","bad");$("ph").focus();return}
+ var b=this;b.disabled=true;b.textContent="Sending…";hint("phh","");
+ api("/api/forgot-otp",{phone:phone()}).then(function(d){
+  if(!d.ok){b.disabled=false;b.textContent="Send OTP";hint("phh",d.error||"Could not send the OTP.","bad");if(d.wait)startCool(d.wait);return}
+  $("otpbox").hidden=false;hint("phh","OTP sent to +91 "+phone(),"ok");startCool(30);$("otp").value="";$("otp").focus();
+  hint("oth",d.demo_otp?"Demo mode (no SMS service connected). Your OTP is "+d.demo_otp:"Check your messages. The OTP is valid for 5 minutes.",d.demo_otp?"ok":"")
+ }).catch(function(){b.disabled=false;b.textContent="Send OTP";hint("phh","Network error. Please try again.","bad")})};
+$("verify").onclick=function(){
+ var o=$("otp").value;if(o.length!==6){hint("oth","Enter the 6-digit OTP.","bad");return}
+ api("/api/forgot-verify",{phone:phone(),otp:o}).then(function(d){
+  if(d.ok){verified=true;verPhone=phone();hint("oth","✓ Phone number verified. Now set your new password.","ok");$("ph").readOnly=true;$("verify").disabled=true;$("sendotp").disabled=true;$("pwbox").hidden=false;$("pw").focus();check()}
+  else hint("oth",d.error||"Wrong OTP.","bad")}).catch(function(){hint("oth","Network error. Please try again.","bad")})};
+$("rf").addEventListener("submit",function(e){if($("sub").disabled)e.preventDefault()});
+</script>{% endblock %}"""
 
 T["register.html"] = """{% extends "base.html" %}{% block body %}<div class="w"><section>
 <div class="card auth-card"><h2>Create your account</h2><p class="m">Register with your phone number. We send a one-time password (OTP) to verify it.</p>
@@ -764,7 +815,7 @@ def headers(r):
     r.headers.setdefault("X-Content-Type-Options", "nosniff")
     r.headers.setdefault("X-Frame-Options", "DENY")
     r.headers.setdefault("Referrer-Policy", "same-origin")
-    if request.endpoint in ("login", "register", "send_otp", "verify_otp"):
+    if request.endpoint in ("login", "register", "send_otp", "verify_otp", "forgot", "forgot_otp", "forgot_verify"):
         r.headers["Cache-Control"] = "no-store"
     return r
 
@@ -777,7 +828,7 @@ def inject_user():
     return {"user": current_user()}
 
 
-OPEN_PAGES = {"login", "register", "send_otp", "verify_otp", "icon", "manifest", "sw", "offline", "healthz"}
+OPEN_PAGES = {"login", "register", "send_otp", "verify_otp", "forgot", "forgot_otp", "forgot_verify", "icon", "manifest", "sw", "offline", "healthz"}
 
 
 @app.route("/healthz")
@@ -839,7 +890,7 @@ def login():
     nxt = safe_next(request.values.get("next"))
     if current_user(): return redirect(nxt)
     if request.method == "GET":
-        return render_template("login.html", error=None, ident="", nxt=nxt)
+        return render_template("login.html", error=None, ident="", nxt=nxt, msg="Password changed successfully. Please log in with your new password." if request.args.get("reset") else None)
     ident = (request.form.get("ident") or "").strip()[:120]
     pw = request.form.get("password") or ""
     key = (valid_email(ident) or norm_phone(ident) or ident).lower()
@@ -903,6 +954,71 @@ def verify_otp():
     sql("DELETE FROM otps WHERE phone=?", (ph,), write=True)
     session["otp_phone"], session["otp_until"] = ph, time.time() + 900
     return jsonify(ok=True)
+
+
+# ============================================================ FORGOT PASSWORD (OTP to the registered phone, then set a new password)
+@app.route("/api/forgot-otp", methods=["POST"])
+def forgot_otp():
+    if not csrf_ok(): return jsonify(ok=False, error="Session expired. Please refresh the page."), 400
+    ph = norm_phone((request.get_json(silent=True) or {}).get("phone"))
+    if not ph: return jsonify(ok=False, error="Enter a valid 10-digit Indian mobile number."), 400
+    if not sql("SELECT 1 FROM users WHERE phone=?", (ph,), one=True): return jsonify(ok=False, error="This phone number is not registered. Please create an account."), 404
+    now = time.time(); row = sql("SELECT * FROM otps WHERE phone=?", (ph,), one=True)
+    count, wstart = 1, now
+    if row:
+        if now - row["sent_at"] < OTP_COOLDOWN:
+            return jsonify(ok=False, error="Please wait before requesting another OTP.", wait=int(OTP_COOLDOWN - (now - row["sent_at"])) + 1), 429
+        if now - row["window_start"] < 3600:
+            if row["sent_count"] >= OTP_PER_HOUR: return jsonify(ok=False, error="Too many OTP requests. Please try again after an hour."), 429
+            count, wstart = row["sent_count"] + 1, row["window_start"]
+    code = f"{secrets.randbelow(10 ** 6):06d}"
+    sql("INSERT OR REPLACE INTO otps(phone,code_hash,expires,attempts,sent_at,sent_count,window_start) VALUES (?,?,?,?,?,?,?)",
+        (ph, hash_otp(ph, code), now + OTP_TTL, 0, now, count, wstart), write=True)
+    msg = f"Your Voltnexa password reset code is {code}. It is valid for 5 minutes. Do not share it with anyone."
+    try:
+        sent = send_sms(ph, msg)
+    except Exception:
+        return jsonify(ok=False, error="The SMS could not be sent right now. Please try again."), 502
+    if not sent:
+        print(f"[DEMO SMS] Password reset OTP for +91{ph}: {code}   (set TWILIO_SID / TWILIO_TOKEN / TWILIO_FROM to send real SMS)")
+    return jsonify(ok=True, demo_otp=None if sent or not DEMO_OTP else code)
+
+
+@app.route("/api/forgot-verify", methods=["POST"])
+def forgot_verify():
+    if not csrf_ok(): return jsonify(ok=False, error="Session expired. Please refresh the page."), 400
+    d = request.get_json(silent=True) or {}
+    ph, code = norm_phone(d.get("phone")), str(d.get("otp") or "")
+    row = sql("SELECT * FROM otps WHERE phone=?", (ph,), one=True) if ph else None
+    if not row or row["expires"] < time.time(): return jsonify(ok=False, error="The OTP has expired. Please request a new one."), 400
+    if row["attempts"] >= OTP_TRIES: return jsonify(ok=False, error="Too many wrong attempts. Please request a new OTP."), 429
+    if not re.fullmatch(r"[0-9]{6}", code) or not hmac.compare_digest(row["code_hash"], hash_otp(ph, code)):
+        sql("UPDATE otps SET attempts=attempts+1 WHERE phone=?", (ph,), write=True)
+        return jsonify(ok=False, error=f"Wrong OTP. {max(0, OTP_TRIES - row['attempts'] - 1)} attempts left."), 400
+    sql("DELETE FROM otps WHERE phone=?", (ph,), write=True)
+    session["reset_phone"], session["reset_until"] = ph, time.time() + 900
+    return jsonify(ok=True)
+
+
+@app.route("/forgot", methods=["GET", "POST"])
+def forgot():
+    if current_user(): return redirect("/")
+    if request.method == "GET":
+        return render_template("forgot.html", error=None, phone="")
+    ph = norm_phone(request.form.get("phone"))
+    pw, pw2 = request.form.get("password") or "", request.form.get("password2") or ""
+    row = sql("SELECT * FROM users WHERE phone=?", (ph,), one=True) if ph else None
+    if not csrf_ok(): err = "Your session expired. Please try again."
+    elif not ph or not row or session.get("reset_phone") != ph or session.get("reset_until", 0) < time.time(): err = "Please verify your phone number with the OTP first."
+    elif password_problem(pw, row["first_name"], ph, row["email"]): err = password_problem(pw, row["first_name"], ph, row["email"])
+    elif pw != pw2: err = "Password and confirm password do not match."
+    else: err = None
+    if err:
+        return render_template("forgot.html", error=err, phone=request.form.get("phone", "")[:15]), 400
+    sql("UPDATE users SET pw_hash=? WHERE phone=?", (generate_password_hash(pw), ph), write=True)
+    session.pop("reset_phone", None); session.pop("reset_until", None)
+    FAILS.pop(ph, None); FAILS.pop(row["email"], None)          # clear any login lock after a successful reset
+    return redirect("/login?reset=1")
 
 
 # ============================================================ INSTALLABLE APP (PWA): manifest, icons, service worker
